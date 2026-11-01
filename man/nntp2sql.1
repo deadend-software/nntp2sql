@@ -1,0 +1,503 @@
+.\" Manual page for nntp2sql
+.TH NNTP2SQL 1 "2026-10-31" "nntp2sql (beta 0.50)" "User Commands"
+.SH NAME
+nntp2sql \- download Usenet (NNTP) article headers into a SQL database
+.SH SYNOPSIS
+.B nntp2sql
+.B \-\-host
+.I HOST
+.B \-\-db\-type
+.I TYPE
+.B \-\-db\-name
+.I NAME
+.B \-\-group
+.I GROUP
+.RI [ options ]
+.br
+.B nntp2sql
+.B \-\-help
+.PP
+Running
+.B nntp2sql
+with no arguments prints the full option reference and exits with status 0.
+.SH DESCRIPTION
+.B nntp2sql
+connects to an NNTP news server, reads the article headers of a newsgroup, and stores them in a
+SQLite, MySQL/MariaDB or PostgreSQL database. It supports implicit TLS and STARTTLS, optional
+authentication, a pool of parallel server connections, automatic reconnect and retry, and a live
+progress bar.
+.PP
+Each article is stored once per (group, article number). The database carries a unique index on
+.IR "(group_name, artnum)" ,
+and every write is an update-or-insert, so fetching the same range again updates existing rows
+instead of adding duplicates. Only headers are downloaded; article bodies and attached files are
+fetched on demand by
+.BR isotope-viewer (1).
+.PP
+Besides downloading, the program can list every group a server carries, remove duplicate rows, export
+stored articles to HTML, create empty databases, and save its options to a file and/or into the
+database so later runs and the viewers can start from them.
+.SH OPTIONS
+Options that take a value accept it as the next argument. Operations marked
+.I exits
+do their work and stop without downloading articles.
+.SS News server
+.TP
+.BI \-\-host " HOST"
+News server to connect to (default:
+.BR localhost ).
+.TP
+.BI \-\-port " PORT"
+Server port (default 563 with
+.BR \-\-ssl ,
+otherwise 119).
+.TP
+.B \-\-ssl
+Encrypt the whole connection with TLS from the start.
+.TP
+.B \-\-starttls
+Connect in plain text, then upgrade to TLS with the STARTTLS command.
+.TP
+.BI \-\-user " USER" "\fR, \fB\-\-pass\fI PASS"
+Authentication. Both must be given together.
+.SS Database
+.TP
+.BI \-\-db\-type " TYPE"
+Required. One of
+.BR sqlite ,
+.BR mysql ,
+.B mariadb
+or
+.BR postgres .
+.TP
+.BI \-\-db\-name " NAME"
+Required. The database name; for SQLite, the path of the database file.
+.TP
+.BI \-\-db\-host " HOST" "\fR, \fB\-\-db\-port\fI PORT"
+MySQL/PostgreSQL server (defaults: localhost; 3306 for MySQL, 5432 for PostgreSQL).
+.TP
+.BI \-\-db\-user " USER" "\fR, \fB\-\-db\-pass\fI PASS"
+Database login (defaults: user root for MySQL and postgres for PostgreSQL; empty password).
+.SS What to download
+.TP
+.BI \-\-group " GROUP"
+Newsgroup to fetch, for example
+.BR alt.binaries.sounds.lossless.jazz .
+.TP
+.BR \-\-headers\-only ", " \-\-xover
+Fetch headers in bulk with XOVER, in batches of up to 500 articles. Much faster. Without it, each
+article's full header is requested individually with HEAD.
+.TP
+.BI \-\-limit " N"
+Fetch only the newest
+.I N
+articles of the group. The default is the whole group.
+.TP
+.BI \-\-articles " N" "\fR, \fB\-\-count\fI N\fR, \fB\-\-max\-articles\fI N\fR, \fB\-n\fI N"
+Like
+.BR \-\-limit ,
+but keep going until exactly
+.I N
+articles are stored, even when some article numbers are missing on the server.
+.TP
+.BI \-\-since " MMDDYYYY"
+Start at the first article posted on or after this date, for example
+.B 10152026
+for 15 October 2026 (month, day, four-digit year; it must be a real calendar date). Downloading
+proceeds upward from there. Combined with
+.BR \-\-limit ,
+.I N
+articles are taken going forward from the date. Alias:
+.BR \-\-from\-date .
+.TP
+.BR \-\-resume ", " \-\-continue ", " \-\-from\-last
+Continue where the last run stopped: start at the highest article number already stored in the database
+for the group. That article is fetched again, which is harmless because writes are upserts, and it
+covers a batch that was cut off. If nothing is stored for the group yet the run starts normally; if the
+stored numbers lie beyond the server's range (a renumbered group) a warning is printed and the run
+starts from the beginning of the range. The article it resumes at is printed, and the run notes when the
+group is already up to date. With
+.BR \-\-limit ,
+.I N
+articles are taken going forward from that point; with
+.BR \-\-since ,
+the run starts at the later of the two.
+.TP
+.BI \-\-threads " N"
+Parallel server connections, 1\-64 (default 16). Stay within your provider's connection limit.
+.TP
+.BI \-\-retries " N"
+Reconnect attempts for a failed request, 0\-10 (default 3).
+.TP
+.B \-\-upsert
+Insert new articles and update existing ones (the default).
+.TP
+.BR \-\-update\-only ", " \-\-no\-upsert
+Only update articles that are already stored; never insert.
+.SS Group list and maintenance (these exit)
+.TP
+.BR \-\-list\-groups ", " \-\-all\-groups
+Download the server's complete group list with
+.BR "LIST ACTIVE"
+(falling back to
+.BR LIST ),
+store every group in the
+.B groups
+table inside one transaction, print them, and exit. The stored article count is the estimate
+high \- low + 1 until headers are fetched.
+.TP
+.BR \-\-remove\-duplicates ", " \-\-dedupe
+Delete duplicate articles, keeping the oldest row of each set: the same article number in a group, or
+the same Message-ID in a group. The same Message-ID in different groups (a cross-post) is kept. The
+unique index is then rebuilt. Run this on databases created by older versions.
+.TP
+.B \-\-export\-html
+Write the stored articles of a group to HTML instead of downloading. Needs
+.B \-\-export\-html\-out
+and either
+.B \-\-group
+or
+.BR \-\-group\-list .
+.TP
+.BI \-\-export\-html\-out " PATH"
+Output file for a single group, or output directory for a group list.
+.TP
+.BI \-\-group\-list " FILE"
+Text file of group names, one per line (lines starting with
+.B #
+or
+.B ;
+are comments). Used by
+.B \-\-export\-html
+and
+.BR \-\-skeleton\-db .
+.SS Creating a database
+.TP
+.B \-\-init\-db
+Create the tables and record the server settings. A missing MySQL/MariaDB database is created and a
+SQLite file is created on first use; a PostgreSQL database must already exist. Continues with the
+download when
+.B \-\-group
+is given, otherwise exits after initializing.
+.TP
+.B \-\-create\-db
+Create the database and tables, then exit.
+.TP
+.BR \-\-skeleton\-db ", " \-\-create\-skeleton\-db ", " \-\-skeleton
+Create the database, tables, settings and group rows, then exit. Without
+.B \-\-db\-type
+and
+.BR \-\-db\-name
+it defaults to the SQLite file
+.BR nntp2sql.db .
+.SS Configuration
+.TP
+.B \-\-save\-config
+Save this run's options to the file
+.B ~/.config/nntp2sql/nntp2sql.conf
+(created with mode 0600), then exit. No database is touched. The file is read automatically by later
+runs and by
+.BR isotope-viewer (1).
+.TP
+.B \-\-save\-config\-db
+Save the same options into the database, in a table named after it (database
+.B news0
+uses the table
+.BR news0_settings ;
+a SQLite file
+.B data/news.db
+uses
+.BR news_settings ),
+then exit. Needs
+.B \-\-db\-type
+and
+.BR \-\-db\-name ;
+no config file is written. Give both
+.B \-\-save\-config
+and
+.B \-\-save\-config\-db
+to do both. Passwords are stored in plain text in either place.
+.TP
+.BR \-\-load\-config ", " \-\-read\-config
+Read the saved config file (or the one named by
+.BR \-\-conf )
+and print the settings it contains (passwords shown as
+.BR ******** ).
+Fails with status 3 if the file is missing. It applies even with
+.BR \-\-no\-config .
+Without this option the default file is still read silently into every run when it exists.
+.TP
+.BR \-\-load\-config\-db ", " \-\-read\-config\-db
+Read the settings stored in a database and print what they hold and what would change. The database must
+be named on the command line with
+.B \-\-db\-name
+(for example
+.BR "\-\-db\-type mysql \-\-db\-name news0" );
+a database that only a config file supplies does not count, and the command fails with status 2 without it.
+The settings are applied without a prompt unless
+.B \-\-confirm\-db\-defaults
+is also given. Fails with status 3 if the database has no stored settings. Command-line options still
+win.
+.PP
+By themselves, the two load options only show the settings and exit, without contacting any server or
+downloading anything. When the command line also asks for work, such as
+.BR \-\-group ,
+.BR \-\-limit ,
+.BR \-\-since
+or
+.BR \-\-list\-groups ,
+they read the settings and then carry out that work. For example,
+.B nntp2sql \-\-db\-name news0 \-\-load\-config\-db \-\-group alt.test
+takes the server, login and other settings from the database and downloads the group's headers.
+.PP
+Combining a read option with a save option copies settings between the two places, then exits:
+.B \-\-load\-config\-db \-\-save\-config
+copies the database settings into the file, and
+.B \-\-load\-config \-\-save\-config\-db
+copies the file into the database.
+.TP
+.BR \-\-confirm\-db\-defaults ", " \-\-ask\-db\-defaults
+Before fetching, list the defaults stored in the database that would change this run, showing the
+current value beside each (passwords as
+.BR ******** ),
+and ask
+.B [y/N]
+before applying them. Without this option stored defaults are applied automatically. It needs a
+terminal; when standard input is not interactive the stored defaults are skipped rather than waiting.
+.TP
+.B \-\-no\-config
+Ignore the saved default config file for this run.
+.TP
+.BI \-\-conf " FILE"
+Read options from
+.I FILE
+(\fBkey=value\fR lines) instead of the default config file.
+.TP
+.BI \-\-write\-conf " FILE"
+Write the current options to
+.I FILE
+and exit.
+.SS Output
+.TP
+.BI \-\-progress\-width " N"
+Width of the progress bar in characters, 5\-200 (default 24).
+.TP
+.B \-\-verbose
+Print informational messages as well as warnings and errors.
+.TP
+.BI \-\-log " FILE"
+Also append log messages to
+.IR FILE .
+.TP
+.BR \-\-help ", " \-h
+Show the option reference.
+.SH CONFIGURATION AND DEFAULTS
+Command-line options always win. Below that, the server, port, group, threads and similar settings
+stored in the database override the config file, while the NNTP login from the config file wins over
+the one stored in the database. Anything still unset takes the built-in default.
+.PP
+Config file keys:
+.BR host ,
+.BR port ,
+.BR ssl ,
+.BR starttls ,
+.BR user ,
+.BR pass ,
+.BR db_type ,
+.BR db_name ,
+.BR db_host ,
+.BR db_port ,
+.BR db_user ,
+.BR db_pass ,
+.BR group ,
+.BR headers_only ,
+.BR limit ,
+.BR progress_width ,
+.BR threads ,
+.BR retries .
+.SH DATABASE SCHEMA
+Three tables are created if missing. The options table is named after the database, so several
+databases on one server each keep their own.
+.TP
+.B groups
+.IR name " (unique), " article_count ", " first ", " last .
+.TP
+.B articles
+.IR artnum ", " subject ", " author ", " date ", " message_id ", " refs ", " bytes ", " line_count ", " group_name ,
+with a unique index on
+.IR "(group_name, artnum)" .
+.TP
+.IB database _settings
+.IR key / value
+pairs holding the options stored by
+.BR \-\-save\-config\-db ,
+for example
+.B news0_settings
+in the database
+.BR news0 .
+Only letters, digits and underscores are kept in the name. Databases made by older versions kept these in a
+single table called
+.BR settings ;
+the first time such a database is opened its rows are copied into the new table (the old table is left in
+place), and the viewers still read the old table when the new one is empty.
+.PP
+Text is stored as UTF-8. Header bytes that are not valid UTF-8 are converted assuming Windows-1252,
+so subjects from older newsreaders (a Latin-1 middle dot, curly quotes) are stored instead of being
+rejected by the database.
+.SH EXAMPLES
+Newest 5000 articles of a group into a local SQLite file:
+.PP
+.RS
+.nf
+nntp2sql \-\-host news.example.com \-\-ssl \-\-user me \-\-pass secret \e
+    \-\-db\-type sqlite \-\-db\-name news.db \-\-init\-db \e
+    \-\-group alt.test \-\-limit 5000 \-\-headers\-only
+.fi
+.RE
+.PP
+Everything since 15 October 2026 into MySQL:
+.PP
+.RS
+.nf
+nntp2sql \-\-host news.example.com \-\-ssl \-\-user me \-\-pass secret \e
+    \-\-db\-type mysql \-\-db\-name news0 \-\-db\-user root \-\-init\-db \e
+    \-\-group alt.test \-\-since 10152026 \-\-headers\-only
+.fi
+.RE
+.PP
+Save the options once, to the file and to the database, then fetch with only the group named:
+.PP
+.RS
+.nf
+nntp2sql \-\-host news.example.com \-\-ssl \-\-user me \-\-pass secret \-\-threads 8 \-\-save\-config
+nntp2sql \-\-host news.example.com \-\-ssl \-\-user me \-\-pass secret \-\-threads 8 \e
+    \-\-db\-type mysql \-\-db\-name news0 \-\-db\-user root \-\-save\-config\-db
+nntp2sql \-\-db\-type mysql \-\-db\-name news0 \-\-db\-user root \e
+    \-\-confirm\-db\-defaults \-\-group alt.test \-\-limit 1000
+.fi
+.RE
+.PP
+Fetch only what is new since the last run (continue from the last stored article):
+.PP
+.RS
+.nf
+nntp2sql \-\-db\-type mysql \-\-db\-name news0 \-\-load\-config\-db \-\-group alt.test \-\-resume \-\-headers\-only
+.fi
+.RE
+.PP
+Copy the settings stored in a database into the config file, and the file into another database:
+.PP
+.RS
+.nf
+nntp2sql \-\-db\-type mysql \-\-db\-name news0 \-\-db\-user root \-\-load\-config\-db \-\-save\-config
+nntp2sql \-\-load\-config \-\-db\-type mysql \-\-db\-name news1 \-\-db\-user root \-\-save\-config\-db
+.fi
+.RE
+.PP
+Download and store the server's group list, then browse it:
+.PP
+.RS
+.nf
+nntp2sql \-\-host news.example.com \-\-ssl \-\-user me \-\-pass secret \e
+    \-\-db\-type sqlite \-\-db\-name news.db \-\-init\-db \-\-list\-groups
+hydrogen\-group\-viewer \-\-db\-type sqlite news.db
+.fi
+.RE
+.PP
+Remove duplicates from an older database, and export a group to HTML:
+.PP
+.RS
+.nf
+nntp2sql \-\-db\-type mysql \-\-db\-name news0 \-\-db\-user root \-\-remove\-duplicates
+nntp2sql \-\-db\-type sqlite \-\-db\-name news.db \-\-export\-html \e
+    \-\-group alt.test \-\-export\-html\-out alt.test.html
+.fi
+.RE
+.SH EXIT STATUS
+.TP
+.B 0
+Success.
+.TP
+.B 2
+Invalid or missing arguments.
+.TP
+.B 3
+Bad configuration file.
+.TP
+.B 10\-15
+Network, TLS, NNTP greeting, NNTP command or authentication failure.
+.TP
+.B 20\-22
+Database connection, schema or statement failure.
+.TP
+.B 30
+Runtime error, or a download that finished with failed requests or writes.
+.PP
+Pressing Ctrl+C stops cleanly: workers finish their current request, everything stored so far is kept,
+and the exit status is 130.
+.SH FILES
+.TP
+.B ~/.config/nntp2sql/nntp2sql.conf
+Options saved by
+.BR \-\-save\-config .
+.B $XDG_CONFIG_HOME
+is honoured. Contains passwords; created readable only by you.
+.TP
+.B <database>_settings
+Table inside each database holding the options stored by
+.BR \-\-save\-config\-db .
+.TP
+.B ~/.config/nntp2sql/viewer.ini
+Settings remembered by
+.BR isotope-viewer (1).
+.SH BUGS AND LIMITATIONS
+.IP \(bu 2
+Without
+.BR \-\-limit ,
+.BR \-\-articles ,
+.B \-\-since
+or
+.BR \-\-resume ,
+a group is read from its oldest article number upward. On large binary groups the oldest articles have
+usually expired on the server, so the early part of such a run reports only missing articles. Use
+.BR \-\-since ,
+.B \-\-limit
+or
+.B \-\-resume
+to begin where articles still exist.
+.IP \(bu 2
+.B \-\-since
+locates its start by binary search on article dates, so it assumes dates rise roughly with article
+numbers. A few badly dated posts can shift the start slightly. It needs the server's XOVER command, and
+an article that cannot be read during the search is treated as older than the date.
+.IP \(bu 2
+Some servers number articles sparsely, so a group's stored article count (and
+.BR \-\-list\-groups
+estimates) can be far larger than the number of articles that really exist.
+.IP \(bu 2
+Conversion of non-UTF-8 headers assumes Windows-1252. Other legacy encodings can be mis-rendered.
+.IP \(bu 2
+.B \-\-save\-config
+and
+.B \-\-save\-config\-db
+store the NNTP and database passwords in plain text. Protect the file and the database accordingly.
+.IP \(bu 2
+.B \-\-init\-db
+cannot create a PostgreSQL database; create it first. PostgreSQL is the least exercised backend.
+.IP \(bu 2
+.BR \-\-write\-conf ,
+.B \-\-save\-config
+(without
+.BR \-\-save\-config\-db )
+and
+.B \-\-help
+exit before connecting to any server or database.
+.IP \(bu 2
+Only headers are downloaded. Article bodies and files are fetched by
+.BR isotope-viewer (1).
+.SH SEE ALSO
+.BR isotope\-viewer (1),
+.BR hydrogen\-group\-viewer (1),
+.BR news (5)
+.SH AUTHOR
+Cherry Soda Research and Software

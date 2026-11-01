@@ -1,0 +1,226 @@
+.\" Manual page for isotope-viewer
+.TH ISOTOPE-VIEWER 1 "2026-10-31" "nntp2sql (beta 0.50)" "User Commands"
+.SH NAME
+isotope-viewer \- browse nntp2sql articles and yEnc files, read text articles, and view images
+.SH SYNOPSIS
+.B isotope-viewer
+.RB [ \-\-db\-type
+.IR "sqlite" | "mysql" | "postgres"
+.RI [ CONNECTION ]]
+.SH DESCRIPTION
+.B isotope-viewer
+is a GTK4 program for working with the headers that
+.BR nntp2sql (1)
+has stored. It lists the articles and the yEnc files they belong to, lets you search and queue files,
+downloads and verifies them from the news server, reads text articles, and shows images in a built-in
+viewer.
+.PP
+It works with SQLite, MySQL/MariaDB and PostgreSQL. Each backend starts with a connection string that
+works on a default local installation, so on a stock setup you can open the program and click Open.
+.SH OPTIONS
+.TP
+.BR \-\-db\-type " \fITYPE\fR [\fICONNECTION\fR]"
+Start on the given backend, optionally with a connection string. Without it the program starts on the
+backend and connection it used last, or on SQLite.
+.SH CONNECTION STRINGS
+.TP
+.B SQLite
+A path to a database file, or a directory containing several. Default:
+.BR nntp2sql.db .
+.TP
+.B MySQL / MariaDB
+.IR host,database,user,password,port .
+Default:
+.BR 127.0.0.1,nntp2sql,root,,3306 .
+A URL form
+.RI ( mysql://user:pass@host:port/db )
+and a
+.IR "host=\|... dbname=\|..." " form are also accepted."
+.TP
+.B PostgreSQL
+Same forms as MySQL. Default:
+.BR 127.0.0.1,nntp2sql,postgres,,5432 .
+.PP
+When the default host or user does not work, the program also tries
+.B localhost
+or
+.BR 127.0.0.1 ,
+and your operating-system user name.
+.SH DETECTING DATABASES
+On start, when the backend changes, and with the
+.B Detect databases
+button, the program looks for every database that has the nntp2sql tables and lists them in the
+Database dropdown (for example
+.BR news0 ,
+.BR news1 ).
+The first one found opens automatically. A database qualifies when it has an
+.B articles
+table with
+.IR artnum ", " group_name " and " subject
+columns and a
+.B groups
+table with
+.IR name " and " article_count .
+.SH THE WINDOW
+.TP
+.B Files / Articles / Text articles
+.B Files
+lists candidate yEnc files (parts grouped by subject).
+.B Articles
+lists every article.
+.B "Text articles"
+lists only text posts, meaning articles with no yEnc marker in the subject, arranged as discussion
+threads: each reply sits directly under the post it answers, indented one level deeper and marked with an
+arrow. Threads follow the References header; a reply whose parent is not in the loaded group starts its own
+thread. Selecting a post shows its body automatically (the NNTP server and login must be filled in). Posts
+in binary groups with obfuscated subjects have no yEnc marker either, so they are listed here too.
+.TP
+.B Group
+Opening a database loads only the list of groups, not their articles. The dropdown starts on
+\(lqSelect a group to load\(rq; choosing a group loads just that group's articles, and
+\(lqAll groups (loads everything)\(rq loads the whole database, which is slow and memory-hungry on large
+ones. Only groups that have articles are listed.
+.TP
+.B Search
+Filters by subject, filename, author, group, date, Message-ID, article number, status, or the word
+.BR queued .
+.TP
+.B Hide text articles
+In Articles mode, hides text posts and shows only yEnc/binary articles. Unavailable in Text articles mode.
+Remembered between runs.
+.TP
+.B Hide incomplete files
+Hides files that are missing part headers or are ambiguous, in both modes. Remembered between runs.
+.TP
+.B Queue selected, Check all shown, Clear queue
+Choose files for download.
+.TP
+.B Download file / queue, Download to...
+Fetch the chosen files into the Save to folder (or a folder you pick). Each file is assembled from its
+parts and checked against the decoded sizes and CRC32 before it is published. Existing files are never
+overwritten. A file is saved only when it is complete: if a part's header is missing from the database, or a
+part is no longer on the server, the file is refused with a message and nothing is written; incomplete files
+are never saved partly.
+.TP
+.B Read article
+Opens the selected article in its own window (see ARTICLE WINDOW). The selection may be any article; in Files
+mode the file's first part is read.
+.TP
+.B Auto-load text articles
+When on, selecting a single text article in Articles mode loads its body automatically. Text articles mode
+always does this. If the body cannot be read, the details pane shows the reason.
+.TP
+.B View image
+Download the selected image file (jpg, png, gif, webp, bmp, tiff, avif, heic) and show it in an article
+window. A file already saved this session opens without downloading again.
+.TP
+.B Save viewed images
+When on, viewed images are also copied into the Save to folder; a name clash gets a numeric suffix
+instead of an error. When off, nothing is kept on disk.
+.SH ARTICLE WINDOW
+Read article opens a window with the article's Subject, From, Date, Newsgroups and Message-ID, its text, and
+a
+.B Reply
+button. The whole article is fetched from the news server (so the NNTP server and login must be set).
+.PP
+If the article carries an image, it is shown in the same window, below the text. Images are found as a
+base64 attachment in a MIME message (including inside multipart messages) or as an inline yEnc body; for
+yEnc the checksum is verified and a warning is shown if it does not match. Text in other character sets and
+quoted-printable text are converted. Attachments that are not shown, and any further images, are listed in
+a note under the text.
+.PP
+The image area has
+.BR "Zoom in" ,
+.BR "Zoom out" ,
+.B 100%
+and
+.B Fit
+buttons and
+.BR "Save image..." ,
+which writes the original file bytes to a place you choose. Several windows can be open at once.
+.SH REPLYING
+.B Reply
+opens an editor with the sender, Newsgroups (the group you are browsing), Subject (\(lqRe: ...\(rq without
+repeating Re:) and the original text quoted with \(lq> \(rq, cut at the signature. The References header is
+built from the original's, ending with its Message-ID, so threads stay connected. Enter your address in
+.B From
+(\(lqName <you@example.com>\(rq; it is remembered), write below the quote, and press
+.BR Post .
+.PP
+Posting is public and cannot be taken back, so a confirmation always appears first, naming the group and the
+server. The article is sent through the server entered in the main window with NNTP POST, as UTF-8; non-ASCII
+names and subjects are encoded. The Post button is disabled after a successful post so the same reply cannot
+be sent twice. Header fields cannot contain line breaks. The server assigns the Message-ID and Date.
+.SH DEFAULTS FROM NNTP2SQL
+Server details are filled in from, in this order of priority:
+.IP 1. 3
+The first time you open a database, the options stored in it by
+.B nntp2sql \-\-save\-config\-db
+(server, port, security, workers, user, password). They are kept in a table named after the database, such as
+.B news0_settings
+for the database
+.BR news0 ;
+databases from older versions keep them in a table called
+.BR settings ,
+which is read when the named table is empty.
+.IP 2. 3
+At launch, the file
+.B ~/.config/nntp2sql/nntp2sql.conf
+written by
+.B nntp2sql \-\-save\-config
+(including the database connection).
+.IP 3. 3
+The viewer's own remembered settings in
+.BR ~/.config/nntp2sql/viewer.ini .
+.PP
+Opening the same database again does not overwrite fields you have edited.
+.SH FILES
+.TP
+.B ~/.config/nntp2sql/nntp2sql.conf
+Options saved by nntp2sql. Contains passwords.
+.TP
+.B ~/.config/nntp2sql/viewer.ini
+Folder, server, security, workers, database connections and the checkbox settings last used.
+.SH BUGS AND LIMITATIONS
+.IP \(bu 2
+The passwords read from nntp2sql's file and database are stored in plain text.
+.IP \(bu 2
+Image detection uses the file name in the subject. A file with an image extension that is not a real
+image is saved if
+.B Save viewed images
+is on and then reported as unsupported.
+.IP \(bu 2
+Downloads refuse to overwrite an existing file, so fetching a file that already exists in the Save to
+folder fails with an error.
+.IP \(bu 2
+Choosing \(lqAll groups\(rq reads every article into memory; very large databases take time and memory.
+Loading one group at a time avoids this.
+.IP \(bu 2
+Threads are built only from the References header, within the loaded group, and the threaded view is
+Text articles mode only. Long threads are indented to at most 24 levels.
+.IP \(bu 2
+Only the first image of an article is shown, and uuencoded attachments are not decoded.
+.IP \(bu 2
+Posting supports plain replies only: no new threads, cancels or attachments, and the Message-ID and Date are
+left to the server. Whether posting is allowed depends on the server and account.
+.IP \(bu 2
+The viewer cannot confirm that a post appeared; it reports only the server's answer.
+.IP \(bu 2
+PostgreSQL support is loaded at run time from libpq and is the least exercised backend.
+.SH ICON
+The program has its own icon, a newspaper, named
+.BR isotope-viewer .
+On Linux and BSD, GTK finds it in the icon theme (installed under
+.IR prefix /share/icons/hicolor ,
+with the matching
+.B .desktop
+file in
+.IR prefix /share/applications ),
+or next to the program in an
+.B icons
+folder when run from a build directory. On macOS the Dock icon is set while the program runs. On Windows the
+window icon comes from the same icon theme and the executable's own icon is compiled in from
+.BR icons/isotope-viewer.rc .
+.SH SEE ALSO
+.BR nntp2sql (1),
+.BR hydrogen\-group\-viewer (1)

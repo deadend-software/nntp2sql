@@ -1,0 +1,3 @@
+/* Windows resource script: gives the .exe its icon in Explorer and the taskbar.
+ * Compiled by windres when the programs are built for Windows (see Makefile.am). */
+IDI_ICON1 ICON "isotope-viewer.ico"

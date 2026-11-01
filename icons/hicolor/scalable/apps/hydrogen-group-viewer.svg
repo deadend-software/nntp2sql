@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Icon for hydrogen-group-viewer (the newsgroup list): a card listing newsgroups as an indented hierarchy,
+     with a hydrogen-atom badge. 512x512, no text glyphs, so it renders identically everywhere. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1f8f7e"/>
+      <stop offset="1" stop-color="#08342f"/>
+    </linearGradient>
+    <linearGradient id="card" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f7fbfa"/>
+      <stop offset="1" stop-color="#d9ebe7"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="9" stdDeviation="9" flood-color="#000" flood-opacity="0.45"/>
+    </filter>
+    <clipPath id="tileclip"><rect x="16" y="16" width="480" height="480" rx="108"/></clipPath>
+  </defs>
+
+  <!-- app tile -->
+  <rect x="16" y="16" width="480" height="480" rx="108" fill="url(#tile)"/>
+  <g clip-path="url(#tileclip)">
+    <ellipse cx="150" cy="40" rx="330" ry="170" fill="#ffffff" opacity="0.08"/>
+  </g>
+
+  <!-- a second card behind -->
+  <g transform="rotate(6 262 262)" filter="url(#shadow)">
+    <rect x="132" y="92" width="262" height="340" rx="16" fill="#a9cfc8"/>
+  </g>
+
+  <!-- the group list card -->
+  <g transform="rotate(-4 250 262)" filter="url(#shadow)">
+    <rect x="96" y="66" width="296" height="382" rx="18" fill="url(#card)"/>
+    <!-- title bar -->
+    <rect x="96" y="66" width="296" height="62" rx="18" fill="#0f5a50"/>
+    <rect x="96" y="100" width="296" height="28" fill="#0f5a50"/>
+    <circle cx="128" cy="97" r="9" fill="#bfe8df"/>
+    <rect x="150" y="89" width="150" height="16" rx="8" fill="#e9fbf6"/>
+
+    <!-- hierarchy: connector lines -->
+    <g stroke="#7fa8a0" stroke-width="5" stroke-linecap="round" fill="none">
+      <path d="M130 158 L130 372"/>
+      <path d="M130 200 L152 200"/><path d="M130 246 L152 246"/>
+      <path d="M176 270 L176 296"/><path d="M176 296 L198 296"/>
+      <path d="M130 340 L152 340"/><path d="M130 372 L152 372"/>
+    </g>
+    <!-- rows: name pill + article-count chip -->
+    <g>
+      <rect x="116" y="146" width="150" height="24" rx="12" fill="#0f5a50"/><rect x="298" y="146" width="62" height="24" rx="12" fill="#f2a31b"/>
+      <rect x="156" y="188" width="138" height="24" rx="12" fill="#2f8f80"/><rect x="306" y="188" width="54" height="24" rx="12" fill="#9bc9c1"/>
+      <rect x="156" y="234" width="112" height="24" rx="12" fill="#2f8f80"/><rect x="298" y="234" width="62" height="24" rx="12" fill="#9bc9c1"/>
+      <rect x="180" y="284" width="128" height="24" rx="12" fill="#58aa9c"/><rect x="316" y="284" width="44" height="24" rx="12" fill="#c9e3de"/>
+      <rect x="116" y="328" width="150" height="24" rx="12" fill="#0f5a50"/><rect x="298" y="328" width="62" height="24" rx="12" fill="#f2a31b"/>
+      <rect x="156" y="360" width="104" height="24" rx="12" fill="#2f8f80"/><rect x="306" y="360" width="54" height="24" rx="12" fill="#9bc9c1"/>
+    </g>
+  </g>
+
+  <!-- hydrogen atom badge: a nucleus with one electron on its orbit -->
+  <g filter="url(#shadow)">
+    <circle cx="404" cy="404" r="76" fill="#f2a31b"/>
+    <circle cx="404" cy="404" r="76" fill="none" stroke="#ffd37a" stroke-width="5" opacity="0.8"/>
+  </g>
+  <circle cx="404" cy="404" r="40" fill="none" stroke="#fffaf0" stroke-width="7"/>
+  <circle cx="404" cy="404" r="15" fill="#fffaf0"/><circle cx="404" cy="404" r="6" fill="#c77f06"/>
+  <circle cx="432" cy="376" r="12" fill="#fffaf0"/><circle cx="432" cy="376" r="5" fill="#c77f06"/>
+</svg>

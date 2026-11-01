@@ -1,0 +1,27 @@
+nntp2sql (beta 0.50) - download Usenet (NNTP) article headers into a SQL database
+
+Programs:
+  nntp2sql               command-line downloader (SQLite, MySQL/MariaDB, PostgreSQL)
+  isotope-viewer         GTK4 browser: articles, yEnc files, text articles, image viewer
+  hydrogen-group-viewer  GTK4 browser for the groups table
+
+Build:
+  autoreconf -fi
+  ./configure
+  make
+  sudo make install
+
+Run:
+  ./nntp2sql                 (no arguments: prints the complete option reference)
+  ./nntp2sql --host news.example.com --ssl --user me --pass secret \
+      --db-type sqlite --db-name news.db --init-db --group alt.test --limit 5000 --headers-only
+  ./nntp2sql --host news.example.com --ssl --db-type mysql --db-name news0 \
+      --group alt.test --since 10152026
+  ./isotope-viewer
+  ./hydrogen-group-viewer
+
+Docs:
+  README.md                      features, saved configuration, schema, known issues
+  man nntp2sql
+  man isotope-viewer
+  man hydrogen-group-viewer

@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Isotope
+GenericName=Newsreader
+Comment=Browse, read, reply to and download Usenet articles stored by nntp2sql
+Exec=isotope-viewer
+Icon=isotope-viewer
+Terminal=false
+Categories=Network;News;GTK;
+Keywords=usenet;nntp;news;newsreader;articles;
+StartupWMClass=isotope-viewer

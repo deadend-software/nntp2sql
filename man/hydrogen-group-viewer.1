@@ -1,0 +1,80 @@
+.\" Manual page for hydrogen-group-viewer
+.TH HYDROGEN-GROUP-VIEWER 1 "2026-10-31" "nntp2sql (beta 0.50)" "User Commands"
+.SH NAME
+hydrogen-group-viewer \- browse the newsgroups stored in an nntp2sql database
+.SH SYNOPSIS
+.B hydrogen\-group\-viewer
+.RB [ \-\-db\-type
+.IR "sqlite" | "mysql" | "postgres"
+.RI [ CONNECTION ]]
+.br
+.B hydrogen\-group\-viewer \-\-help
+.SH DESCRIPTION
+.B hydrogen\-group\-viewer
+is a GTK4 program that lists every newsgroup in the
+.B groups
+table of an nntp2sql database: its name, the estimated article count, and the first and last article
+numbers. Fill the table with
+.B nntp2sql \-\-list\-groups
+to see the whole server's group list.
+.PP
+It reads SQLite, MySQL/MariaDB and PostgreSQL databases and starts each with a connection string that
+works on a default local installation, so it can be opened and used immediately.
+.SH OPTIONS
+.TP
+.BR \-\-db\-type " \fITYPE\fR [\fICONNECTION\fR]"
+Start on the given backend with an optional connection string.
+.TP
+.B \-\-help
+Print usage and the default connection strings.
+.SH USING THE WINDOW
+.TP
+.B Backend dropdown
+SQLite, MySQL / MariaDB or PostgreSQL. Each remembers its own connection string while the program runs.
+.TP
+.B Database dropdown, Detect databases
+Lists every database with the nntp2sql tables (for example
+.BR news0 ,
+.BR news1 ).
+The first one is opened automatically; choose another to load it.
+.TP
+.B Connection box, Open / Reload
+Type a connection string and press Enter or click the button. The forms are the same as for
+.BR isotope\-viewer (1).
+.TP
+.B Filter box
+Shows only groups whose name contains the text (case-insensitive).
+.TP
+.B Column headers
+Click to sort by name, article count, first or last article number.
+.PP
+Loading runs in the background, so the window stays responsive with lists of over 100,000 groups.
+.SH BUGS AND LIMITATIONS
+.IP \(bu 2
+The article count is an estimate (last \- first + 1) until headers have been downloaded for a group,
+and it can be far too high on servers with sparse article numbers.
+.IP \(bu 2
+The program shows every group in the table; it does not show only groups that have articles. Use
+.BR isotope\-viewer (1)
+for that.
+.IP \(bu 2
+Connection strings are not remembered between runs.
+.IP \(bu 2
+PostgreSQL is the least exercised backend.
+.SH ICON
+The program has its own icon, a card listing newsgroups as an indented hierarchy with a hydrogen-atom badge, named
+.BR hydrogen-group-viewer .
+On Linux and BSD, GTK finds it in the icon theme (installed under
+.IR prefix /share/icons/hicolor ,
+with the matching
+.B .desktop
+file in
+.IR prefix /share/applications ),
+or next to the program in an
+.B icons
+folder when run from a build directory. On macOS the Dock icon is set while the program runs. On Windows the
+window icon comes from the same icon theme and the executable's own icon is compiled in from
+.BR icons/hydrogen-group-viewer.rc .
+.SH SEE ALSO
+.BR nntp2sql (1),
+.BR isotope\-viewer (1)

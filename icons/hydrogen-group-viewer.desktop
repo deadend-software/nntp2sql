@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Hydrogen Groups
+GenericName=Newsgroup list
+Comment=Browse the newsgroups stored in an nntp2sql database
+Exec=hydrogen-group-viewer
+Icon=hydrogen-group-viewer
+Terminal=false
+Categories=Network;News;GTK;
+Keywords=usenet;nntp;news;newsgroups;
+StartupWMClass=hydrogen-group-viewer
